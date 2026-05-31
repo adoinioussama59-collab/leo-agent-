@@ -1357,9 +1357,20 @@ body::after {
 var OLLAMA_URL = localStorage.getItem('leo_ollama_url') || 'http://localhost:11434';
 var MODEL = localStorage.getItem('leo_model') || 'llama3.2:3b';
 var isConnected = false;
-var AI_BACKEND = localStorage.getItem('leo_ai_backend') ? JSON.parse(localStorage.getItem('leo_ai_backend')) : 'ollama';
-var HF_TOKEN   = localStorage.getItem('leo_hf_token')   ? JSON.parse(localStorage.getItem('leo_hf_token'))   : '';
-var HF_MODEL   = localStorage.getItem('leo_hf_model')   ? JSON.parse(localStorage.getItem('leo_hf_model'))   : 'mistralai/Mistral-7B-Instruct-v0.3';
+
+// ── AUTO-CONNECT: HuggingFace is the default backend ──
+// Token is stored in localStorage — set once, works forever
+var _SAVED_TOKEN = localStorage.getItem('leo_hf_token') ? JSON.parse(localStorage.getItem('leo_hf_token')) : '';
+var _SAVED_BACKEND = localStorage.getItem('leo_ai_backend') ? JSON.parse(localStorage.getItem('leo_ai_backend')) : 'hf';
+
+// First visit: save HF as default so overlay never shows again
+if (!localStorage.getItem('leo_ai_backend')) {
+  localStorage.setItem('leo_ai_backend', JSON.stringify('hf'));
+}
+
+var AI_BACKEND = _SAVED_BACKEND || 'hf';
+var HF_TOKEN   = _SAVED_TOKEN  || '';
+var HF_MODEL   = localStorage.getItem('leo_hf_model') ? JSON.parse(localStorage.getItem('leo_hf_model')) : 'mistralai/Mistral-7B-Instruct-v0.3';
 var currentSessionId = null;
 var chatHistory = [];
 var msgSinceLearn = 0;
@@ -6432,29 +6443,44 @@ function init() {
   var urlInput = document.getElementById('ollamaUrl');
   if (urlInput) urlInput.value = OLLAMA_URL;
 
-  checkOllama(false);
-  initVoice();
-
-  // Resume any running challenge across page reloads
-  loadChState();
-
-  // If HuggingFace backend configured, skip Ollama overlay
-  if (AI_BACKEND === 'hf' && HF_TOKEN && HF_TOKEN.length > 10) {
-    isConnected = true;
+  // ── Auto-connect logic ──
+  // If HF backend with a token → skip overlay immediately
+  // If HF backend but no token yet → show overlay but skip Ollama retry
+  // If Ollama backend → try Ollama as before
+  if (AI_BACKEND === 'hf') {
+    // Always hide Ollama overlay in HF mode — user configures token in Settings
     var overlay = document.getElementById('connection-overlay');
     if (overlay) overlay.style.display = 'none';
     document.getElementById('status-dot').className = 'status-dot';
-    addSystemMsg('✦ HuggingFace cloud backend active — ' + HF_MODEL);
+    isConnected = true;
+    if (!currentSessionId) {
+      currentSessionId = 'session_' + Date.now();
+      chatHistory = [];
+      renderChatWelcome();
+    }
+    if (HF_TOKEN && HF_TOKEN.length > 10) {
+      addSystemMsg('✦ HuggingFace cloud active — ' + HF_MODEL + ' · No PC needed');
+    } else {
+      addSystemMsg('⚠ Add your HuggingFace token in ⚙ Settings to activate AI features.');
+      switchPanel('settings');
+      setTimeout(function() {
+        var sel = document.getElementById('s-backend');
+        if (sel) { sel.value = 'hf'; toggleBackendSections(); }
+        var msg = document.getElementById('settings-msg');
+        if (msg) { msg.textContent = '← Paste your HuggingFace token here and click TEST HF CONNECTION'; msg.style.color = 'var(--amber)'; }
+        var inp = document.getElementById('s-hf-token');
+        if (inp) inp.focus();
+      }, 500);
+    }
+  } else {
+    checkOllama(false);
+    retryTimer = setInterval(function() {
+      if (!isConnected) checkOllama(true);
+    }, 5000);
   }
 
-  retryTimer = setInterval(function() {
-    if (!isConnected) checkOllama(true);
-  }, 5000);
-
-  if (!currentSessionId) {
-    currentSessionId = 'session_' + Date.now();
-    chatHistory = [];
-  }
+  initVoice();
+  loadChState();
 
   // Auto-boot learning engine after connection
   setTimeout(function() {
