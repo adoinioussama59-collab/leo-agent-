@@ -527,16 +527,19 @@ body::after {
 
 /* ===================== CONNECTION OVERLAY ===================== */
 #connection-overlay {
-  position: fixed; inset: 0; z-index: 1000;
+  position: fixed; inset: 0; z-index: 9999;
   background: rgba(2,8,16,0.97);
   display: flex; align-items: center; justify-content: center;
   backdrop-filter: blur(4px);
+  overflow-y: auto;
 }
 .conn-box {
   background: var(--bg2); border: 1px solid var(--border);
-  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
-  padding: 40px; max-width: 460px; width: 90%;
-  box-shadow: 0 0 60px rgba(0,212,255,0.1);
+  border-radius: 4px;
+  padding: 32px 36px; max-width: 520px; width: 92%;
+  box-shadow: 0 0 60px rgba(0,212,255,0.15);
+  position: relative; z-index: 10000;
+  margin: 20px auto;
 }
 .conn-title { font-size: 24px; letter-spacing: 8px; color: var(--cyan); margin-bottom: 6px; text-shadow: 0 0 20px var(--cyan); }
 .conn-sub { font-size: 11px; color: var(--red); letter-spacing: 2px; margin-bottom: 24px; }
@@ -831,48 +834,41 @@ body::after {
 
 <!-- CONNECTION OVERLAY -->
 <div id="connection-overlay">
-  <div class="conn-box" style="max-width:520px;">
+  <div class="conn-box">
     <div class="conn-title">L·E·O</div>
     <div class="conn-sub" id="conn-sub-title">⚠ CONNECTING TO OLLAMA…</div>
 
-    <div id="conn-instructions" style="display:none;">
-      <div style="font-size:11px;color:var(--amber);margin-bottom:14px;padding:8px 12px;background:rgba(255,170,0,0.07);border:1px solid rgba(255,170,0,0.2);">
-        ⚡ CORS must be enabled. Run Ollama with this environment variable:
+    <!-- HuggingFace option — shown prominently first -->
+    <div style="margin-bottom:20px;padding:14px 16px;background:rgba(0,255,136,0.07);border:2px solid rgba(0,255,136,0.4);border-radius:4px;">
+      <div style="font-size:11px;color:var(--green);font-weight:bold;margin-bottom:8px;letter-spacing:1px;">✓ RECOMMENDED — HUGGINGFACE FREE CLOUD</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.8;margin-bottom:12px;">
+        100% free · No credit card · No PC needed · Always online
       </div>
-      <div class="conn-step">
-        <div class="conn-num">1</div>
-        <div class="conn-text"><strong>Mac / Linux</strong> — open a terminal and run:</div>
-      </div>
-      <div class="conn-code">OLLAMA_ORIGINS="*" ollama serve</div>
-      <div class="conn-step">
-        <div class="conn-num">2</div>
-        <div class="conn-text"><strong>Windows</strong> — in PowerShell:</div>
-      </div>
-      <div class="conn-code">$env:OLLAMA_ORIGINS="*"; ollama serve</div>
-      <div class="conn-step">
-        <div class="conn-num">3</div>
-        <div class="conn-text">Pull the model if you haven't already:</div>
-      </div>
-      <div class="conn-code">ollama pull llama3.2:3b</div>
+      <button
+        style="width:100%;padding:12px;background:rgba(0,255,136,0.15);border:2px solid var(--green);color:var(--green);font-family:var(--font);font-size:13px;letter-spacing:2px;cursor:pointer;border-radius:4px;font-weight:bold;"
+        onclick="skipToHF()">
+        USE HUGGINGFACE INSTEAD →
+      </button>
     </div>
 
-    <div class="conn-url-row" style="margin-top:16px;">
+    <!-- Ollama option -->
+    <div id="conn-instructions" style="display:none;margin-bottom:16px;">
+      <div style="font-size:10px;color:var(--amber);margin-bottom:10px;padding:8px;background:rgba(255,170,0,0.07);border:1px solid rgba(255,170,0,0.2);border-radius:3px;">
+        ⚡ Run Ollama with CORS enabled:
+      </div>
+      <div class="conn-code">OLLAMA_ORIGINS="*" ollama serve</div>
+      <div style="font-size:10px;color:var(--text-dim);margin:6px 0 4px;">Windows PowerShell:</div>
+      <div class="conn-code">$env:OLLAMA_ORIGINS="*"; ollama serve</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;letter-spacing:1px;">OR CONNECT LOCAL OLLAMA:</div>
+    <div class="conn-url-row">
       <input type="text" id="ollamaUrl" value="http://localhost:11434" placeholder="http://localhost:11434">
       <button class="btn" onclick="tryConnect()">CONNECT</button>
     </div>
-    <div id="conn-status" class="conn-status"></div>
-    <div id="conn-diag" style="font-size:10px;color:var(--text-dim);margin-top:6px;min-height:14px;word-break:break-all;"></div>
-    <div style="margin-top:14px;padding:10px 12px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);">
-      <div style="font-size:10px;color:var(--green);font-weight:bold;margin-bottom:5px;">◈ OR USE HUGGINGFACE — NO PC NEEDED</div>
-      <div style="font-size:11px;color:var(--text-dim);line-height:1.7;">
-        100% free · No credit card · Works when your PC is off<br>
-        <strong style="color:var(--text);">1.</strong> Close this overlay below<br>
-        <strong style="color:var(--text);">2.</strong> Go to Settings → Switch backend to HuggingFace<br>
-        <strong style="color:var(--text);">3.</strong> Get a free token at <strong style="color:var(--cyan);">huggingface.co/settings/tokens</strong>
-      </div>
-      <button class="btn sm green" style="margin-top:8px;" onclick="skipToHF()">USE HUGGINGFACE INSTEAD →</button>
-    </div>
-    <div class="conn-retry-note" style="margin-top:10px;">Auto-retrying Ollama every 5 seconds…</div>
+    <div id="conn-status" class="conn-status" style="margin-top:8px;"></div>
+    <div id="conn-diag" style="font-size:10px;color:var(--text-dim);margin-top:4px;min-height:14px;word-break:break-all;"></div>
+    <div class="conn-retry-note" style="margin-top:10px;">Auto-retrying every 5 seconds…</div>
   </div>
 </div>
 
@@ -4091,20 +4087,26 @@ function openHFTokenPage() {
 
 // One-click: dismiss Ollama overlay and go straight to HF settings
 function skipToHF() {
-  document.getElementById('connection-overlay').style.display = 'none';
+  var overlay = document.getElementById('connection-overlay');
+  if (overlay) overlay.style.display = 'none';
   document.getElementById('status-dot').className = 'status-dot';
   if (!currentSessionId) startNewSession();
+  // Pre-select HF backend
+  ls_set('ai_backend', 'hf');
+  AI_BACKEND = 'hf';
   switchPanel('settings');
-  // Pre-select HF backend in the dropdown
-  var sel = document.getElementById('s-backend');
-  if (sel) { sel.value = 'hf'; toggleBackendSections(); }
   setTimeout(function() {
+    var sel = document.getElementById('s-backend');
+    if (sel) { sel.value = 'hf'; toggleBackendSections(); }
     var msg = document.getElementById('settings-msg');
     if (msg) {
-      msg.textContent = '← Get a free token at huggingface.co/settings/tokens, paste it here, then click TEST HF CONNECTION';
+      msg.textContent = '← Get a free token at huggingface.co/settings/tokens, paste it here, then TEST HF CONNECTION';
       msg.style.color = 'var(--amber)';
     }
-  }, 200);
+    // Scroll HF token input into view
+    var hfInput = document.getElementById('s-hf-token');
+    if (hfInput) { hfInput.focus(); hfInput.scrollIntoView({ behavior:'smooth', block:'center' }); }
+  }, 300);
 }
 
 function factoryReset() {
